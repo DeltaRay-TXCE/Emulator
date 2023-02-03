@@ -1,0 +1,1 @@
+Please initialize a new CXX file called `main.cxx` in this directory.
