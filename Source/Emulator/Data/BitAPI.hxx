@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <exception>
+#include <initializer_list>
 
 namespace emulator {
 class BitAPI {
@@ -9,7 +10,9 @@ private:
     bool m_autoTrigger;
     bool m_detectCorruption = true;
     size_t m_packetSize;
-    size_t m_newestBits{};
+    size_t m_newestBits {};
+
+    BitAPI *m_returnAPI;
 
     void reset(bool reBuildPacket = true) {
         delete m_packet;
@@ -19,11 +22,11 @@ private:
     }
 
 public:
-    explicit BitAPI(bool autoTrigger = false, size_t packetSize = 1) : m_autoTrigger(autoTrigger), m_packetSize(packetSize), m_newestBits(0) {
+    explicit BitAPI(bool autoTrigger = false, size_t packetSize = 1) : m_autoTrigger(autoTrigger), m_packetSize(packetSize), m_newestBits(0), m_returnAPI(nullptr) {
         m_packet = new bool[packetSize];
     }
 
-    ~BitAPI() {
+    virtual ~BitAPI() {
         reset(false);
     }
 
@@ -43,12 +46,20 @@ public:
         m_autoTrigger = automatic;
     }
 
+    void setReturnAPI(BitAPI *api) {
+        m_returnAPI = api;
+    }
+
     void setPacketSize(size_t size) {
         if (size > 0) m_packetSize = size;
     }
 
     void setDetectCorruption(bool detect = true) {
         m_detectCorruption = detect;
+    }
+
+    void writePacket(std::initializer_list<bool> packet) {
+        for (bool bit : packet) funnelBit(bit);
     }
 
     void flush() {
@@ -80,7 +91,16 @@ public:
         return m_detectCorruption;
     }
 
-    virtual void collectDirectDrive(bool value) = 0;
-    virtual void collectPacket(bool *value, size_t size) = 0;
+    [[nodiscard]] constexpr BitAPI *getReturnAPI() const {
+        return m_returnAPI;
+    }
+
+    void crashOnUnmet(size_t bitExpectancy) {
+        if (m_returnAPI != nullptr && m_returnAPI->getPacketSize() != bitExpectancy)
+            throw std::runtime_error("Unmet bit expectation! (Expected: " + std::to_string(bitExpectancy) + ", Actual: " + std::to_string(m_returnAPI->getPacketSize()) + ")");
+    }
+
+    virtual void collectDirectDrive(bool value) {}
+    virtual void collectPacket(bool *value, size_t size) {}
 };
 }

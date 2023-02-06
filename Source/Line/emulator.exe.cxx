@@ -1,32 +1,24 @@
 #include <iostream>
-#include "../Emulator/Data/BitAPI.hxx"
+#include "../../Device/SerialHostTime/Device.hxx"
 
-class BitReader : public emulator::BitAPI {
+class TimeReader : public emulator::BitAPI {
 public:
-    BitReader() {
-        setTriggerMode(false);
-        setPacketSize(1);
-    }
+    TimeReader() : BitAPI(true, 32) {}
 
     void collectPacket(bool *packet, size_t size) override {
-        for (size_t i = 0; i < size; i++) {
-            std::cout << packet[i];
-        }
-        std::cout << std::endl;
-    }
-
-    void collectDirectDrive(bool bit) override {
-
+        size_t unixTime = 0;
+        for (int i = 0; i < 32; i++) unixTime |= packet[i] << i;
+        std::cout << "Unix time: " << unixTime << std::endl;
     }
 };
 
 int main(const int argc, const char* argv[])
 {
-    BitReader reader;
+    emulator::device::SerialHostTime device;
 
-    reader.funnelBit(true);
+    device.setReturnAPI(new TimeReader());
 
-    reader.flush();
+    device.funnelBit(true);
 
     return 0;
 }
